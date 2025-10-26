@@ -10,7 +10,7 @@
 	"url": "https://www.mediawiki.org/wiki/Extension:PdfBook",
 	"descriptionmsg": "pdfbook-desc",
 	"requires": {
-		"MediaWiki": ">= 1.39.0"
+		"MediaWiki": ">= 1.40.0"
 	},
 	"type": "parserhook",
 	"callback": "PdfBookHooks::onRegistration",
