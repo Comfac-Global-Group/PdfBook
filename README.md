@@ -95,6 +95,205 @@ $wgPdfBookNumbering = 'yes';
 $wgPdfBookOptions = '--no-links';
 ```
 
+## Docker Deployment
+
+For Docker-based MediaWiki deployments, you need a **custom Dockerfile** that includes HTMLDoc and persists the extension configuration.
+
+### Dockerfile
+
+Create a `Dockerfile` in your project:
+
+```dockerfile
+# Use the official MediaWiki image as base
+FROM mediawiki:1.40
+
+# Install HTMLDoc (required for PdfBook)
+RUN apt-get update && apt-get install -y \
+    htmldoc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify HTMLDoc installation
+RUN which htmldoc
+
+# Copy PdfBook extension into the container
+# Option 1: Clone during build
+RUN cd /var/www/html/extensions && \
+    git clone https://github.com/Comfac-Global-Group/PdfBook.git
+
+# Option 2: Copy local PdfBook folder (if you have it locally)
+# COPY ./PdfBook /var/www/html/extensions/PdfBook
+
+# Ensure proper permissions
+RUN chown -R www-data:www-data /var/www/html/extensions/PdfBook
+```
+
+### Docker Compose
+
+Create a `docker-compose.yml` file:
+
+```yaml
+version: '3.8'
+
+services:
+  mediawiki:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mediawiki-pdfbook
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      # Persist MediaWiki data (images, cache, LocalSettings.php)
+      - ./data/images:/var/www/html/images
+      - ./data/cache:/var/www/html/cache
+      
+      # Persist LocalSettings.php (contains PdfBook configuration)
+      - ./data/LocalSettings.php:/var/www/html/LocalSettings.php:ro
+      
+      # Optional: Persist the PdfBook extension for development
+      # - ./PdfBook:/var/www/html/extensions/PdfBook
+      
+    environment:
+      - MEDIAWIKI_DB_TYPE=mysql
+      - MEDIAWIKI_DB_HOST=db
+      - MEDIAWIKI_DB_NAME=mediawiki
+      - MEDIAWIKI_DB_USER=wikiuser
+      - MEDIAWIKI_DB_PASSWORD=wikipass
+    depends_on:
+      - db
+    networks:
+      - wiki-network
+
+  db:
+    image: mysql:8.0
+    container_name: mediawiki-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: mediawiki
+      MYSQL_USER: wikiuser
+      MYSQL_PASSWORD: wikipass
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - wiki-network
+
+volumes:
+  db_data:
+
+networks:
+  wiki-network:
+    driver: bridge
+```
+
+### LocalSettings.php for Docker
+
+Create `./data/LocalSettings.php` with PdfBook configuration:
+
+```php
+<?php
+# ... your existing MediaWiki configuration ...
+
+# Enable PdfBook extension
+wfLoadExtension( 'PdfBook' );
+
+# PdfBook Configuration
+$wgPdfBookTab = true;           # Show "Print as PDF" tab for logged-in users
+$wgPdfBookDownload = true;      # Force PDF download
+
+# Margins
+$wgPdfBookLeftMargin = '2cm';
+$wgPdfBookRightMargin = '2cm';
+$wgPdfBookTopMargin = '1.5cm';
+$wgPdfBookBottomMargin = '1.5cm';
+
+# Font settings
+$wgPdfBookFont = 'Arial';
+$wgPdfBookFontSize = '10';
+$wgPdfBookFontSpacing = 1.5;
+
+# Other settings
+$wgPdfBookTocLevels = '3';
+$wgPdfBookLinkColour = '0066CC';
+$wgPdfBookNumbering = 'yes';
+```
+
+### Deployment Steps
+
+```bash
+# 1. Create project directory
+mkdir -p mediawiki-pdfbook/data
+cd mediawiki-pdfbook
+
+# 2. Create Dockerfile and docker-compose.yml (as shown above)
+
+# 3. Create LocalSettings.php with PdfBook config in ./data/
+
+# 4. Build and start the containers
+docker-compose up -d --build
+
+# 5. Verify HTMLDoc is installed
+docker exec mediawiki-pdfbook which htmldoc
+# Should output: /usr/bin/htmldoc
+
+# 6. Complete MediaWiki setup at http://localhost:8080
+# After setup, copy LocalSettings.php to ./data/LocalSettings.php
+```
+
+### Ensuring Persistence
+
+The key to persistence is using **Docker volumes**:
+
+| Path in Container | Purpose | Persistence |
+|-------------------|---------|-------------|
+| `/var/www/html/images` | Uploaded files, PDF cache | ✅ Persisted via volume |
+| `/var/www/html/LocalSettings.php` | Extension config | ✅ Persisted via volume |
+| `/usr/bin/htmldoc` | HTMLDoc binary | ✅ Built into image |
+| `/var/www/html/extensions/PdfBook` | Extension code | ✅ Built into image (or volume mount for dev) |
+
+### Updating PdfBook in Docker
+
+To update the extension:
+
+```bash
+# Option 1: Rebuild the image (pulls latest from git)
+docker-compose down
+docker-compose up -d --build
+
+# Option 2: Update inside running container
+docker exec -it mediawiki-pdfbook bash
+cd /var/www/html/extensions/PdfBook
+git pull
+exit
+docker restart mediawiki-pdfbook
+```
+
+### Troubleshooting Docker Issues
+
+**HTMLDoc not found in container:**
+```bash
+# Check if HTMLDoc is installed
+docker exec mediawiki-pdfbook dpkg -l | grep htmldoc
+
+# If missing, rebuild the image
+docker-compose down
+docker-compose up -d --build
+```
+
+**PDF cache not persisting:**
+```bash
+# Ensure images directory is writable
+docker exec mediawiki-pdfbook chown -R www-data:www-data /var/www/html/images
+docker exec mediawiki-pdfbook chmod 755 /var/www/html/images
+```
+
+**Permission denied on LocalSettings.php:**
+```bash
+# Check file permissions on host
+chmod 644 ./data/LocalSettings.php
+```
+
 ## Usage
 
 ### Method 1: Export a Category as PDF
