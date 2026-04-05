@@ -261,6 +261,7 @@ This extension is licensed under the GNU General Public License v2.0 or later (G
 
 - **Original Author:** Aran Dunkley (Organic Design)
 - **Contributors:** Igor Absorto, Professional Wiki
+- **Documentation:** [Kimi](https://kimi.ai) and [Claude](https://claude.ai) (AI Assistants)
 - **Version:** 3.1.0
 - **Official Documentation:** https://www.mediawiki.org/wiki/Extension:PdfBook
 
