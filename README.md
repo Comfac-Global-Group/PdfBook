@@ -108,17 +108,14 @@ Create a `Dockerfile` in your project:
 FROM mediawiki:1.40
 
 # Install HTMLDoc (required for PdfBook)
-RUN apt-get update && apt-get install -y \
-    htmldoc \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y htmldoc && rm -rf /var/lib/apt/lists/*
 
 # Verify HTMLDoc installation
 RUN which htmldoc
 
 # Copy PdfBook extension into the container
 # Option 1: Clone during build
-RUN cd /var/www/html/extensions && \
-    git clone https://github.com/Comfac-Global-Group/PdfBook.git
+RUN cd /var/www/html/extensions && git clone https://github.com/Comfac-Global-Group/PdfBook.git
 
 # Option 2: Copy local PdfBook folder (if you have it locally)
 # COPY ./PdfBook /var/www/html/extensions/PdfBook
