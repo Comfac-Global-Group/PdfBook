@@ -467,4 +467,4 @@ This extension is licensed under the GNU General Public License v2.0 or later (G
 ## Support
 
 For issues and feature requests, please use the GitHub issue tracker:
-https://github.com/Comfac-Global-Group/PdfBook/issues
+https://github.com/debtcompliance/PdfBook/issues
